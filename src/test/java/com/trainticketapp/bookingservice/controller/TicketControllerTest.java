@@ -18,9 +18,12 @@ import org.springframework.http.MediaType;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
+import org.springframework.web.servlet.config.MvcNamespaceHandler;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -29,6 +32,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 public class TicketControllerTest {
 
+    public static final String LONDON = "London";
+    public static final String FRANCE = "France";
     @MockBean
     private TicketBookingService ticketBookingService;
 
@@ -39,21 +44,60 @@ public class TicketControllerTest {
     private ObjectMapper objectMapper;
 
     @Test
-    public void testPurchaseTicket() throws Exception {
-        TicketPurchaseRequest ticketPurchaseRequest = new TicketPurchaseRequest();
-        ticketPurchaseRequest.setOrigin("London");
-        ticketPurchaseRequest.setDestination("France");
+    public void testPurchaseTicket_when_ticket_purchase_successful() throws Exception {
+        TicketPurchaseRequest request = getTicketPurchaseRequest();
+        TicketReceipt ticketReceipt = getTicketReceipt(request);
+        when(ticketBookingService.purchaseTicket(any())).thenReturn(ticketReceipt);
+
+        mockMvc.perform(post("/api/ticket/purchaseTicket")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andDo(MockMvcResultHandlers.print());
+    }
+
+    private static TicketPurchaseRequest getTicketPurchaseRequest() {
+        TicketPurchaseRequest request = new TicketPurchaseRequest();
+        request.setOrigin(LONDON);
+        request.setDestination(FRANCE);
         User user = new User();
         user.setFirstName("First");
         user.setLastName("Second");
         user.setEmail("first.second@demo.com");
-        ticketPurchaseRequest.setUser(user);
+        request.setUser(user);
+        return request;
+    }
 
-        when(ticketBookingService.purchaseTicket(any())).thenReturn(new TicketReceipt());
+    private static TicketReceipt getTicketReceipt(TicketPurchaseRequest request) {
+        TicketReceipt ticketReceipt = new TicketReceipt();
+        ticketReceipt.setOrigin(request.getOrigin());
+        ticketReceipt.setDestination(request.getDestination());
+        ticketReceipt.setUser(request.getUser());
+        ticketReceipt.setFare(20.0);
+        ticketReceipt.setSeatNo("A1");
+        return ticketReceipt;
+    }
 
-        mockMvc.perform(post("/tickets/purchaseTicket")
+    @Test
+    public void testPurchaseTicket_when_ticket_purchase_unsuccessful() throws Exception {
+        TicketPurchaseRequest request = getTicketPurchaseRequest();
+        when(ticketBookingService.purchaseTicket(any())).thenReturn(null);
+
+        mockMvc.perform(post("/api/ticket/purchaseTicket")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(ticketPurchaseRequest)))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    public void testGetTicketPurchaseReceipt_when_ticket_receipt_found() throws Exception {
+        when(ticketBookingService.getReceipt(any())).thenReturn(getTicketReceipt(getTicketPurchaseRequest()));
+        mockMvc.perform(get("/api/ticket/users/first.second@demo.com/ticketReceipt")).andExpect(status().isOk());
+    }
+
+    @Test
+    public void testGetTicketPurchaseReceipt_when_ticket_receipt_not_found() throws Exception {
+        when(ticketBookingService.getReceipt(any())).thenReturn(null);
+        mockMvc.perform(get("/api/ticket/users/first.second@demo.com/ticketReceipt")).andExpect(status().isNotFound());
     }
 }
