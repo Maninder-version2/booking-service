@@ -1,4 +1,4 @@
-**Booking Service**
+__Booking Service__
 This service can be used to book tickets from one station to another and it also provides some additional functionalities
 
 Below are the supported APIs :
