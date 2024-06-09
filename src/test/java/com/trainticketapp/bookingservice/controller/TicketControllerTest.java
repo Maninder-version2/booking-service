@@ -21,10 +21,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
 import org.springframework.web.servlet.config.MvcNamespaceHandler;
 
+import java.util.Map;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(TicketController.class)
@@ -99,5 +100,43 @@ public class TicketControllerTest {
     public void testGetTicketPurchaseReceipt_when_ticket_receipt_not_found() throws Exception {
         when(ticketBookingService.getReceipt(any())).thenReturn(null);
         mockMvc.perform(get("/api/ticket/users/first.second@demo.com/ticketReceipt")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    public void testGetUsersBySection() throws Exception {
+        when(ticketBookingService.getUsersBySection(any())).thenReturn(null);
+        mockMvc.perform(get("/api/ticket/usersBySection")
+                .param("section", "A")).andExpect(status().isOk());
+    }
+
+
+    @Test
+    public void testRemoveUser_when_user_deleted() throws Exception {
+        when(ticketBookingService.removeUser(any())).thenReturn(true);
+        mockMvc.perform(delete("/api/ticket/users/first.second@demo.com/remove")).andExpect(status().isOk());
+    }
+
+    @Test
+    public void testRemoveUser_when_user_not_deleted() throws Exception {
+        when(ticketBookingService.removeUser(any())).thenReturn(false);
+        mockMvc.perform(delete("/api/ticket/users/first.second@demo.com/remove")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    public void testModifyUserSeat_when_seat_modification_successful() throws Exception {
+        when(ticketBookingService.modifyUserSeat(any(), any(), any())).thenReturn(true);
+        mockMvc.perform(put("/api/ticket/users/first.second@demo.com/modifySeat")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("A", "5"))))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    public void testModifyUserSeat_when_seat_modification_not_successful() throws Exception {
+        when(ticketBookingService.modifyUserSeat(any(), any(), any())).thenReturn(false);
+        mockMvc.perform(put("/api/ticket/users/first.second@demo.com/modifySeat")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("A", "5"))))
+                .andExpect(status().isNotFound());
     }
 }
