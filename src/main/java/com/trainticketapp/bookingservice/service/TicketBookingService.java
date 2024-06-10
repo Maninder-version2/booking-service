@@ -105,7 +105,7 @@ public class TicketBookingService {
         return false;
     }
 
-    private String allocateSeat() {
+    protected String allocateSeat() {
         return seatAllocationService.allocateSeat();
     }
 }
